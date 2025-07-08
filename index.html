@@ -142,11 +142,8 @@
         const nextLapBtn = document.getElementById('next-lap-btn');
         const resetBtn = document.getElementById('reset-btn');
         const finishBtn = document.getElementById('finish-btn');
-        const controlsGrid = document.getElementById('controls-grid');
         const splitsContainer = document.getElementById('splits-container');
         const splitsPlaceholder = document.getElementById('splits-placeholder');
-        
-        // Exercise Modal elements
         const exerciseModal = document.getElementById('exercise-modal');
         const exModalContent = exerciseModal.querySelector('.modal-content');
         const exerciseSelectionView = document.getElementById('exercise-selection-view');
@@ -157,8 +154,6 @@
         const detailsInput = document.getElementById('details-input');
         const backBtn = document.getElementById('back-btn');
         const startSegmentBtn = document.getElementById('start-segment-btn');
-
-        // History Modal elements
         const historyBtn = document.getElementById('history-btn');
         const historyModal = document.getElementById('history-modal');
         const historyModalContent = historyModal.querySelector('.modal-content');
@@ -191,7 +186,8 @@
         // --- Firebase Setup ---
         function setupFirebase() {
             try {
-                // IMPORTANT: These variables are provided by the hosting environment.
+                // ============== IMPORTANT! PASTE YOUR FIREBASE CONFIG HERE ==============
+                // Create a project at console.firebase.google.com and get your config.
                 const firebaseConfig = {
                     apiKey: "AIzaSyCkXUR9qnpffIheEuZ_LxUCbdcGzRaBvhU",
                     authDomain: "hyrox-training-timer-32e4d.firebaseapp.com",
@@ -200,7 +196,18 @@
                     messagingSenderId: "101690945139",
                     appId: "1:101690945139:web:b15d77c73cadcea396c406"
                 };
-                appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                // =======================================================================
+                
+                // Check if the config has been filled out
+                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                     console.error("Firebase config is not set. Please update the firebaseConfig object in the code.");
+                     historyBtn.disabled = true;
+                     historyBtn.textContent = "DB Not Setup";
+                     isAuthReady = false;
+                     return;
+                }
+
+                appId = firebaseConfig.projectId || 'default-app-id';
 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -212,7 +219,6 @@
                         console.log("Authenticated with user ID:", userId);
                         isAuthReady = true;
                     } else {
-                        // If no user, sign in anonymously to get a UID
                         signInAnonymously(auth).catch(error => {
                             console.error("Anonymous sign-in failed:", error);
                         });
@@ -220,7 +226,6 @@
                 });
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                // Optionally disable features that require Firebase
                 historyBtn.disabled = true;
                 historyBtn.textContent = "DB Error";
             }
@@ -244,22 +249,14 @@
             return `${minutes}m ${seconds}s`;
         };
         
-        /**
-         * Formats a Date object into a readable date and time string.
-         * @param {Date} date - The date object to format.
-         * @returns {{date: string, time: string}} An object with formatted date and time.
-         */
         const formatHistoryTimestamp = (date) => {
             if (!date) return { date: 'Date unavailable', time: '' };
-
             const day = date.getDate();
             const year = date.getFullYear();
             const month = date.toLocaleString('default', { month: 'long' });
-
             let daySuffix;
-            if (day > 3 && day < 21) {
-                daySuffix = 'th';
-            } else {
+            if (day > 3 && day < 21) daySuffix = 'th';
+            else {
                 switch (day % 10) {
                     case 1:  daySuffix = "st"; break;
                     case 2:  daySuffix = "nd"; break;
@@ -268,17 +265,14 @@
                 }
             }
             const formattedDate = `${day}${daySuffix} ${month} ${year}`;
-
             let hours = date.getHours();
             const minutes = String(date.getMinutes()).padStart(2, '0');
             const ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
-            hours = hours || 12; // Handle midnight
+            hours = hours || 12;
             const formattedTime = `${hours}:${minutes} ${ampm}`;
-
             return { date: formattedDate, time: formattedTime };
         };
-
 
         function updateTimers() {
             totalTime += 10;
@@ -294,6 +288,7 @@
             startPauseBtn.textContent = 'Pause';
             startPauseBtn.classList.replace('bg-green-500', 'bg-yellow-500');
             startPauseBtn.classList.replace('hover:bg-green-600', 'hover:bg-yellow-600');
+            segmentNameEl.textContent = currentSegment.name;
         }
 
         function pauseTimer() {
@@ -305,19 +300,36 @@
             startPauseBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-green-600');
         }
         
-        const toggleTimer = () => !workoutStarted ? promptForSegment() : (isRunning ? pauseTimer() : startTimer());
+        function handleStartPauseClick() {
+            if (!workoutStarted) {
+                promptForSegment();
+                return;
+            }
+            if (isRunning) {
+                pauseTimer();
+                return;
+            }
+            if (!isRunning && segmentTime > 0) {
+                startTimer();
+                return;
+            }
+            if (!isRunning && segmentTime === 0) {
+                promptForSegment();
+            }
+        }
         
-        function logAndPromptForNext() {
-            if (!workoutStarted || !currentSegment) return;
+        function logSegmentAndPause() {
+            if (!workoutStarted || !currentSegment || segmentTime === 0) return;
             pauseTimer();
             splits.push({ name: currentSegment.name, time: segmentTime });
             renderSplits();
             segmentTime = 0;
             segmentTimerEl.innerHTML = formatTime(0);
-            promptForSegment();
+            segmentNameEl.textContent = "Segment finished. Start next?";
+            startPauseBtn.textContent = 'Start Next';
+            nextLapBtn.disabled = true;
         }
 
-        // --- UI & Modal Functions ---
         const showModal = (modal, content) => {
             modal.classList.remove('hidden');
             setTimeout(() => {
@@ -364,28 +376,38 @@
             if (!value) return;
             const { exercise } = currentSegment;
             currentSegment.name = `${value}${exercise.unit} ${exercise.name}`;
-            segmentNameEl.textContent = currentSegment.name;
             hideModal(exerciseModal, exModalContent);
             startTimer();
 
             if (!workoutStarted) {
                 workoutStarted = true;
                 if(splitsPlaceholder) splitsPlaceholder.style.display = 'none';
-                nextLapBtn.disabled = false;
                 resetBtn.classList.remove('col-span-2');
                 finishBtn.classList.remove('hidden');
             }
+            nextLapBtn.disabled = false;
         }
         
         async function finishWorkout() {
-            if (!currentSegment || !isAuthReady) {
-                 if(!isAuthReady) console.error("Cannot save. Auth not ready.");
-                 return;
-            }
-            
-            splits.push({ name: currentSegment.name, time: segmentTime });
-            renderSplits();
             pauseTimer();
+
+            // FIX: If the last segment was running, log it before finishing.
+            if (currentSegment && segmentTime > 0) {
+                splits.push({ name: currentSegment.name, time: segmentTime });
+                renderSplits(); // Update the UI to show the last split
+                segmentTime = 0;
+            }
+
+            if (!isAuthReady) {
+                console.error("Cannot save. Auth not ready.");
+                segmentNameEl.innerHTML = `<span class="text-red-400">DB Error: Cannot save session.</span>`;
+                return;
+            }
+
+            if (splits.length === 0) {
+                segmentNameEl.textContent = "No workout data to save.";
+                return;
+            }
 
             try {
                 const sessionData = {
@@ -396,15 +418,19 @@
                 const collectionRef = collection(db, 'artifacts', appId, 'users', userId, 'sessions');
                 await addDoc(collectionRef, sessionData);
                 console.log("Session saved successfully!");
+                segmentNameEl.textContent = "Workout Complete! 🎉";
+                
+                startPauseBtn.disabled = true;
+                nextLapBtn.disabled = true;
+                finishBtn.disabled = true;
+                finishBtn.classList.add('hidden');
+                resetBtn.classList.add('col-span-2');
+                startPauseBtn.className = 'btn bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg';
+
             } catch (error) {
                 console.error("Error saving session: ", error);
+                segmentNameEl.innerHTML = `<span class="text-red-400">Save Failed. Check console.</span>`;
             }
-
-            segmentNameEl.textContent = "Workout Complete! 🎉";
-            startPauseBtn.disabled = true;
-            nextLapBtn.disabled = true;
-            finishBtn.disabled = true;
-            startPauseBtn.className = 'btn bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg';
         }
         
         function resetTimer() {
@@ -447,7 +473,6 @@
             splitsContainer.scrollTop = splitsContainer.scrollHeight;
         }
 
-        // --- History Functions ---
         async function showHistory() {
             if (!isAuthReady) {
                 console.error("Auth not ready. Cannot fetch history.");
@@ -456,7 +481,6 @@
             showModal(historyModal, historyModalContent);
             historyDetailsView.classList.add('hidden');
             historyListView.classList.remove('hidden');
-            
             historyListContainer.innerHTML = '<p class="text-center text-gray-500">Loading history...</p>';
 
             const q = query(collection(db, 'artifacts', appId, 'users', userId, 'sessions'), orderBy("createdAt", "desc"));
@@ -473,7 +497,6 @@
                 const session = doc.data();
                 const ts = session.createdAt ? session.createdAt.toDate() : null;
                 const { date, time } = formatHistoryTimestamp(ts);
-
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center bg-gray-700 p-3 rounded-lg cursor-pointer hover:bg-gray-600';
                 item.innerHTML = `
@@ -490,7 +513,6 @@
         function showSessionDetails(session) {
             historyListView.classList.add('hidden');
             historyDetailsView.classList.remove('hidden');
-
             const ts = session.createdAt ? session.createdAt.toDate() : null;
             const { date, time } = formatHistoryTimestamp(ts);
             historyDetailsTitle.textContent = `Details for ${date}`;
@@ -501,7 +523,6 @@
             </div>
             <h3 class="font-bold mb-2 text-gray-300">Splits</h3>
             <div class="space-y-2">`;
-
             session.splits.forEach((split, index) => {
                 detailsHtml += `
                 <div class="flex justify-between items-center bg-gray-700/80 p-2 rounded-md text-sm">
@@ -514,19 +535,15 @@
         }
 
         // --- Event Listeners ---
-        startPauseBtn.addEventListener('click', toggleTimer);
-        nextLapBtn.addEventListener('click', logAndPromptForNext);
+        startPauseBtn.addEventListener('click', handleStartPauseClick);
+        nextLapBtn.addEventListener('click', logSegmentAndPause);
         resetBtn.addEventListener('click', resetTimer);
         finishBtn.addEventListener('click', finishWorkout);
-        
-        // Exercise Modal listeners
         backBtn.addEventListener('click', () => {
             detailsInputView.classList.add('hidden');
             exerciseSelectionView.classList.remove('hidden');
         });
         startSegmentBtn.addEventListener('click', startNewSegment);
-
-        // History Modal listeners
         historyBtn.addEventListener('click', showHistory);
         closeHistoryBtn.addEventListener('click', () => hideModal(historyModal, historyModalContent));
         backToHistoryListBtn.addEventListener('click', () => {
