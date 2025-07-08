@@ -3,13 +3,13 @@
   "name": "Hyrox Training Timer",
   "icons": [
     {
-      "src": "https://storage.googleapis.com/proudcity/mebanenc/uploads/2021/03/placeholder-image.png",
+      "src": "HyroxLogo.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://storage.googleapis.com/proudcity/mebanenc/uploads/2021/03/placeholder-image.png",
+      "src": "HyroxLogo.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
