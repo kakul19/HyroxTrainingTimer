@@ -198,16 +198,7 @@
                 };
                 // =======================================================================
                 
-                // Check if the config has been filled out
-                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                     console.error("Firebase config is not set. Please update the firebaseConfig object in the code.");
-                     historyBtn.disabled = true;
-                     historyBtn.textContent = "DB Not Setup";
-                     isAuthReady = false;
-                     return;
-                }
-
-                appId = firebaseConfig.projectId || 'default-app-id';
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
