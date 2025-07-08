@@ -181,7 +181,7 @@
         let splits = [], currentSegment = null;
 
         // --- Firebase State ---
-        let db, auth, userId, appId, isAuthReady = false;
+        let db, auth, userId, isAuthReady = false;
 
         // --- Firebase Setup ---
         function setupFirebase() {
@@ -198,8 +198,6 @@
                 };
                 // =======================================================================
                 
-                appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -380,14 +378,29 @@
         }
         
         async function finishWorkout() {
-            if (!currentSegment || !isAuthReady) {
-                 if(!isAuthReady) console.error("Cannot save. Auth not ready.");
-                 return;
+            // Ensure the timer is stopped first.
+            pauseTimer();
+
+            if (!isAuthReady) {
+                console.error("Cannot save. Auth not ready.");
+                segmentNameEl.textContent = "Error: Cannot save session.";
+                return;
             }
             
-            splits.push({ name: currentSegment.name, time: segmentTime });
-            renderSplits();
-            pauseTimer();
+            // Only add the last segment if it actually has time on it.
+            if (currentSegment && segmentTime > 0) {
+                splits.push({ name: currentSegment.name, time: segmentTime });
+                renderSplits();
+            }
+            
+            // Prevent saving an empty workout if the user resets or finishes early.
+            if (splits.length === 0) {
+                segmentNameEl.textContent = "Workout cancelled. No data saved.";
+                startPauseBtn.disabled = true;
+                nextLapBtn.disabled = true;
+                finishBtn.disabled = true;
+                return;
+            }
 
             try {
                 const sessionData = {
@@ -395,14 +408,17 @@
                     totalTime: totalTime,
                     splits: splits
                 };
-                const collectionRef = collection(db, 'artifacts', appId, 'users', userId, 'sessions');
+                // CORRECTED PATH: Use 'users' as the top-level collection
+                const collectionRef = collection(db, 'users', userId, 'sessions');
                 await addDoc(collectionRef, sessionData);
                 console.log("Session saved successfully!");
+                segmentNameEl.textContent = "Workout Complete! 🎉";
             } catch (error) {
                 console.error("Error saving session: ", error);
+                segmentNameEl.textContent = "Error saving session!";
             }
 
-            segmentNameEl.textContent = "Workout Complete! 🎉";
+            // Disable all controls except Reset after finishing.
             startPauseBtn.disabled = true;
             nextLapBtn.disabled = true;
             finishBtn.disabled = true;
@@ -459,7 +475,8 @@
             historyListView.classList.remove('hidden');
             historyListContainer.innerHTML = '<p class="text-center text-gray-500">Loading history...</p>';
 
-            const q = query(collection(db, 'artifacts', appId, 'users', userId, 'sessions'), orderBy("createdAt", "desc"));
+            // CORRECTED PATH: Use 'users' as the top-level collection
+            const q = query(collection(db, 'users', userId, 'sessions'), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
