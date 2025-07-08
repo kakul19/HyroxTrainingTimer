@@ -192,7 +192,14 @@
         function setupFirebase() {
             try {
                 // IMPORTANT: These variables are provided by the hosting environment.
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const firebaseConfig = {
+                    apiKey: "AIzaSyCkXUR9qnpffIheEuZ_LxUCbdcGzRaBvhU",
+                    authDomain: "hyrox-training-timer-32e4d.firebaseapp.com",
+                    projectId: "hyrox-training-timer-32e4d",
+                    storageBucket: "hyrox-training-timer-32e4d.firebasestorage.app",
+                    messagingSenderId: "101690945139",
+                    appId: "1:101690945139:web:b15d77c73cadcea396c406"
+                };
                 appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
                 const app = initializeApp(firebaseConfig);
