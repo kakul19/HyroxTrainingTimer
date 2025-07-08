@@ -1,1 +1,1 @@
-# HyroxTrainingTimer
+# Hyrox Training Timer
