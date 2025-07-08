@@ -380,25 +380,14 @@
         }
         
         async function finishWorkout() {
+            if (!currentSegment || !isAuthReady) {
+                 if(!isAuthReady) console.error("Cannot save. Auth not ready.");
+                 return;
+            }
+            
+            splits.push({ name: currentSegment.name, time: segmentTime });
+            renderSplits();
             pauseTimer();
-
-            // FIX: If the last segment was running, log it before finishing.
-            if (currentSegment && segmentTime > 0) {
-                splits.push({ name: currentSegment.name, time: segmentTime });
-                renderSplits(); // Update the UI to show the last split
-                segmentTime = 0;
-            }
-
-            if (!isAuthReady) {
-                console.error("Cannot save. Auth not ready.");
-                segmentNameEl.innerHTML = `<span class="text-red-400">DB Error: Cannot save session.</span>`;
-                return;
-            }
-
-            if (splits.length === 0) {
-                segmentNameEl.textContent = "No workout data to save.";
-                return;
-            }
 
             try {
                 const sessionData = {
@@ -409,19 +398,15 @@
                 const collectionRef = collection(db, 'artifacts', appId, 'users', userId, 'sessions');
                 await addDoc(collectionRef, sessionData);
                 console.log("Session saved successfully!");
-                segmentNameEl.textContent = "Workout Complete! 🎉";
-                
-                startPauseBtn.disabled = true;
-                nextLapBtn.disabled = true;
-                finishBtn.disabled = true;
-                finishBtn.classList.add('hidden');
-                resetBtn.classList.add('col-span-2');
-                startPauseBtn.className = 'btn bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg';
-
             } catch (error) {
                 console.error("Error saving session: ", error);
-                segmentNameEl.innerHTML = `<span class="text-red-400">Save Failed. Check console.</span>`;
             }
+
+            segmentNameEl.textContent = "Workout Complete! 🎉";
+            startPauseBtn.disabled = true;
+            nextLapBtn.disabled = true;
+            finishBtn.disabled = true;
+            startPauseBtn.className = 'btn bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg';
         }
         
         function resetTimer() {
