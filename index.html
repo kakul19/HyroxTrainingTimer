@@ -12,13 +12,15 @@
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            /* New background color */
             background-color: #020617; /* bg-slate-950 */
         }
         .btn {
             transition: all 0.1s ease-in-out;
             touch-action: manipulation;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn:active {
             transform: scale(0.95);
@@ -46,6 +48,9 @@
             pointer-events: none;
             z-index: 100;
         }
+        .popup-menu {
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-white flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
@@ -54,13 +59,13 @@
     <div id="app-container" class="w-full max-w-md mx-auto bg-slate-900/70 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 space-y-6">
         <header class="text-center">
             <h1 class="text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-violet-500">HYROX TIMER</h1>
-            <p id="segment-name" class="text-xl text-slate-300 mt-1 h-7">Ready to start?</p>
         </header>
 
         <!-- Timers -->
         <div class="bg-slate-950/50 rounded-xl p-6 text-center border border-slate-800">
             <div>
-                <p class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Segment Time</p>
+                 <p id="segment-name" class="text-xl text-sky-400 uppercase tracking-widest mb-2 h-7">Ready to start?</p>
+                <p id="segment-label" class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Segment Time</p>
                 <p id="segment-timer" class="text-5xl font-mono-custom font-bold tracking-tight text-white">00:00<span class="text-3xl text-slate-400">.00</span></p>
             </div>
             <div class="mt-4">
@@ -69,21 +74,47 @@
             </div>
         </div>
 
-        <!-- Controls with new colors and layout -->
-        <div class="space-y-4">
-            <div id="controls-grid" class="grid grid-cols-2 gap-4">
-                <button id="start-pause-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg text-lg">Start</button>
-                <button id="next-lap-btn" class="btn bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-lg" disabled>Next</button>
-                <button id="finish-btn" class="btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg text-lg hidden">Finish</button>
-                <button id="reset-segment-btn" class="btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-lg text-lg hidden">Reset Segment</button>
+        <!-- Controls -->
+        <div id="controls-container" class="relative space-y-3">
+             <!-- In-Workout Controls -->
+            <div id="workout-controls" class="hidden space-y-3">
+                <div class="flex justify-between items-center px-4">
+                    <button id="start-pause-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-24 w-24 rounded-full text-lg">
+                        <!-- Icon will be injected by JS -->
+                    </button>
+                    <button id="stop-btn" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold h-24 w-24 rounded-full text-lg">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                </div>
+                <div class="flex justify-center">
+                     <div class="relative">
+                         <button id="reset-menu-btn" class="btn bg-slate-600 hover:bg-slate-700 text-white font-bold h-10 w-10 p-0 rounded-full text-lg">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5" /><path stroke-linecap="round" stroke-linejoin="round" d="M4 9a9 9 0 0114.18-5.4l-2.12 2.12" /><path stroke-linecap="round" stroke-linejoin="round" d="M20 15a9 9 0 01-14.18 5.4l2.12-2.12" /></svg>
+                         </button>
+                          <div id="reset-popup" class="popup-menu absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-2 z-20 hidden opacity-0 transform scale-95 origin-bottom">
+                             <button id="popup-reset-segment-btn" class="w-full text-left p-2 rounded-md hover:bg-slate-700 text-amber-400">Reset Current Segment</button>
+                             <button id="popup-reset-full-btn" class="w-full text-left p-2 rounded-md hover:bg-slate-700 text-rose-500">Reset Full Workout</button>
+                          </div>
+                     </div>
+                </div>
             </div>
-            <div id="reset-btn-container" class="flex justify-center pt-2">
-                 <button id="reset-btn" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-lg text-lg w-full">Reset</button>
+             <!-- Break Time Controls -->
+            <div id="break-controls" class="hidden flex justify-between items-center px-4">
+                <button id="break-start-new-segment-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-24 w-24 rounded-full text-lg">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button id="break-finish-btn" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold h-24 w-24 rounded-full text-lg">
+                    END
+                </button>
+            </div>
+            <!-- Initial Start Button -->
+            <div id="initial-start-container" class="flex justify-center">
+                 <button id="initial-start-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-10 rounded-full text-lg">Start</button>
             </div>
         </div>
 
         <!-- Splits & History -->
-        <div class="space-y-4">
+        <div class="space-y-4 pt-2">
             <div class="flex justify-between items-center border-b-2 border-slate-800 pb-2">
                  <h2 class="text-lg font-semibold text-slate-300">Splits</h2>
                  <button id="history-btn" class="btn bg-slate-700 hover:bg-slate-600 text-sm font-semibold py-1 px-3 rounded-lg">View History</button>
@@ -94,7 +125,7 @@
         </div>
     </div>
 
-    <!-- Modals with updated theme -->
+    <!-- Modals -->
     <div id="exercise-modal" class="modal fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 hidden">
         <div class="modal-content w-full max-w-lg bg-slate-900 rounded-2xl shadow-xl transform scale-95">
             <div id="exercise-selection-view">
@@ -193,13 +224,21 @@
 
         // --- DOM Element References ---
         const segmentNameEl = document.getElementById('segment-name');
+        const segmentLabelEl = document.getElementById('segment-label');
         const segmentTimerEl = document.getElementById('segment-timer');
         const totalTimerEl = document.getElementById('total-timer');
         const startPauseBtn = document.getElementById('start-pause-btn');
-        const nextLapBtn = document.getElementById('next-lap-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const finishBtn = document.getElementById('finish-btn');
-        const resetSegmentBtn = document.getElementById('reset-segment-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const initialStartBtn = document.getElementById('initial-start-btn');
+        const workoutControls = document.getElementById('workout-controls');
+        const resetMenuBtn = document.getElementById('reset-menu-btn');
+        const resetPopup = document.getElementById('reset-popup');
+        const popupResetSegmentBtn = document.getElementById('popup-reset-segment-btn');
+        const popupResetFullBtn = document.getElementById('popup-reset-full-btn');
+        const initialStartContainer = document.getElementById('initial-start-container');
+        const breakControls = document.getElementById('break-controls');
+        const breakStartNewSegmentBtn = document.getElementById('break-start-new-segment-btn');
+        const breakFinishBtn = document.getElementById('break-finish-btn');
         const splitsContainer = document.getElementById('splits-container');
         const splitsPlaceholder = document.getElementById('splits-placeholder');
         const exerciseModal = document.getElementById('exercise-modal');
@@ -239,7 +278,6 @@
         const congratsSplitsCount = document.getElementById('congrats-splits-count');
         const closeCongratsBtn = document.getElementById('close-congrats-btn');
         const confettiCanvas = document.getElementById('confetti-canvas');
-        const resetBtnContainer = document.getElementById('reset-btn-container');
 
 
         // --- Exercise Definition ---
@@ -252,8 +290,9 @@
         ];
         
         // --- State Variables ---
-        let timerInterval = null, totalTime = 0, segmentTime = 0;
-        let isRunning = false, workoutStarted = false;
+        let timerInterval = null;
+        let totalTime = 0, segmentTime = 0, breakTime = 0, totalBreakTime = 0;
+        let isRunning = false, workoutStarted = false, isOnBreak = false;
         let splits = [], currentSegment = null;
         let sessionToDelete = null, resetAction = null;
 
@@ -263,8 +302,6 @@
         // --- Firebase Setup ---
         function setupFirebase() {
             try {
-                // ============== IMPORTANT! PASTE YOUR FIREBASE CONFIG HERE ==============
-                // Create a project at console.firebase.google.com and get your config.
                 const firebaseConfig = {
                     apiKey: "AIzaSyCkXUR9qnpffIheEuZ_LxUCbdcGzRaBvhU",
                     authDomain: "hyrox-training-timer-32e4d.firebaseapp.com",
@@ -273,7 +310,6 @@
                     messagingSenderId: "101690945139",
                     appId: "1:101690945139:web:b15d77c73cadcea396c406"
                 };
-                // =======================================================================
                 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -282,12 +318,9 @@
                 onAuthStateChanged(auth, user => {
                     if (user) {
                         userId = user.uid;
-                        console.log("Authenticated with user ID:", userId);
                         isAuthReady = true;
                     } else {
-                        signInAnonymously(auth).catch(error => {
-                            console.error("Anonymous sign-in failed:", error);
-                        });
+                        signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
                     }
                 });
             } catch (error) {
@@ -305,20 +338,25 @@
             const ms = String(date.getUTCMilliseconds()).padStart(3, '0').slice(0, 2);
             
             let msSpanClass = '';
+            let mainSize = '';
             switch (size) {
-                case 'large': // For base 5xl (Segment Timer)
+                case 'large': 
+                    mainSize = 'text-5xl';
                     msSpanClass = 'text-3xl text-slate-400';
                     break;
-                case 'medium': // For base 3xl or 2xl (Total Timer, Congrats Timer)
+                case 'medium':
+                    mainSize = 'text-3xl';
                     msSpanClass = 'text-xl text-slate-400';
                     break;
-                case 'small': // For base text-sm (Splits List)
+                case 'small':
+                    mainSize = 'text-sm';
                     msSpanClass = 'text-xs text-sky-400/80';
                     break;
                 default:
+                    mainSize = 'text-5xl';
                     msSpanClass = 'text-3xl text-slate-400';
             }
-            return `${minutes}:${seconds}<span class="${msSpanClass}">.${ms}</span>`;
+            return `<span class="${mainSize}">${minutes}:${seconds}</span><span class="${msSpanClass}">.${ms}</span>`;
         };
         
         const formatTimeForDisplay = (timeInMs) => {
@@ -355,26 +393,45 @@
 
         function updateTimers() {
             totalTime += 10;
-            segmentTime += 10;
+            if(isRunning) {
+                segmentTime += 10;
+                segmentTimerEl.innerHTML = formatTime(segmentTime, 'large');
+            } else if (isOnBreak) {
+                breakTime += 10;
+                segmentTimerEl.innerHTML = formatTime(breakTime, 'large');
+            }
             totalTimerEl.innerHTML = formatTime(totalTime, 'medium');
-            segmentTimerEl.innerHTML = formatTime(segmentTime, 'large');
+        }
+
+        function startMasterTimer() {
+            if (!timerInterval) {
+                 timerInterval = setInterval(updateTimers, 10);
+            }
+        }
+
+        function stopMasterTimer() {
+             clearInterval(timerInterval);
+             timerInterval = null;
         }
 
         function startTimer() {
             if (isRunning) return;
-            timerInterval = setInterval(updateTimers, 10);
             isRunning = true;
-            startPauseBtn.textContent = 'Pause';
+            isOnBreak = false;
+            startMasterTimer();
+            startPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
             startPauseBtn.classList.replace('bg-emerald-500', 'bg-yellow-500');
             startPauseBtn.classList.replace('hover:bg-emerald-600', 'hover:bg-yellow-600');
             segmentNameEl.textContent = currentSegment.name;
+            segmentLabelEl.textContent = "Segment Time";
         }
 
         function pauseTimer() {
-            if (!isRunning) return;
-            clearInterval(timerInterval);
-            isRunning = false;
-            startPauseBtn.textContent = 'Resume';
+            if (isRunning) {
+                isRunning = false;
+                stopMasterTimer();
+            }
+            startPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
             startPauseBtn.classList.replace('bg-yellow-500', 'bg-emerald-500');
             startPauseBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-emerald-600');
         }
@@ -386,39 +443,49 @@
             }
             if (isRunning) {
                 pauseTimer();
-                return;
-            }
-            if (!isRunning && segmentTime > 0) {
+            } else {
                 startTimer();
-                return;
-            }
-            if (!isRunning && segmentTime === 0) {
-                promptForSegment();
             }
         }
         
-        function logSegmentAndPause() {
-            if (!workoutStarted || !currentSegment || segmentTime === 0) return;
+        function stopSegmentAndStartBreak() {
+            if (!workoutStarted || !currentSegment) return;
+            
+            // If segment has time, log it. If not (i.e. reset then stop), just skip.
+            if (segmentTime > 0) {
+                splits.push({ name: currentSegment.name, time: segmentTime });
+                renderSplits();
+            }
             pauseTimer();
-            splits.push({ name: currentSegment.name, time: segmentTime });
-            renderSplits();
             segmentTime = 0;
-            segmentTimerEl.innerHTML = formatTime(0, 'large');
-            segmentNameEl.textContent = "Segment finished. Start next?";
-            startPauseBtn.textContent = 'Start Next';
-            nextLapBtn.disabled = true;
+            
+            isOnBreak = true;
+            breakTime = 0;
+            startMasterTimer();
+            
+            workoutControls.classList.add('hidden');
+            breakControls.classList.replace('hidden', 'flex');
+
+            segmentNameEl.textContent = "BREAK";
+            segmentLabelEl.textContent = "Break Time";
+        }
+
+        function startNewSegmentFromBreak() {
+            isOnBreak = false;
+            totalBreakTime += breakTime;
+            breakTime = 0;
+            
+            breakControls.classList.replace('flex', 'hidden');
+            workoutControls.classList.remove('hidden');
+
+            promptForSegment();
         }
 
         function resetSegment() {
-            if (!workoutStarted || segmentTime === 0) return;
-
+            if (!workoutStarted || !currentSegment) return;
             totalTime -= segmentTime;
             segmentTime = 0;
-
-            if (isRunning) {
-                pauseTimer();
-            }
-
+            pauseTimer(); 
             totalTimerEl.innerHTML = formatTime(totalTime, 'medium');
             segmentTimerEl.innerHTML = formatTime(segmentTime, 'large');
         }
@@ -427,13 +494,13 @@
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.add('opacity-100');
-                content.classList.replace('scale-95', 'scale-100');
+                if (content) content.classList.replace('scale-95', 'scale-100');
             }, 10);
         };
 
         const hideModal = (modal, content) => {
             modal.classList.remove('opacity-100');
-            content.classList.replace('scale-100', 'scale-95');
+            if (content) content.classList.replace('scale-100', 'scale-95');
             setTimeout(() => modal.classList.add('hidden'), 300);
         };
         
@@ -470,24 +537,22 @@
             const { exercise } = currentSegment;
             currentSegment.name = `${value}${exercise.unit} ${exercise.name}`;
             hideModal(exerciseModal, exModalContent);
-            startTimer();
-
+            
             if (!workoutStarted) {
                 workoutStarted = true;
                 if(splitsPlaceholder) splitsPlaceholder.style.display = 'none';
                 
-                // Change layout from single button to multi-button grid
-                startPauseBtn.classList.remove('col-span-2');
-                nextLapBtn.classList.remove('hidden');
-                finishBtn.classList.remove('hidden');
-                resetSegmentBtn.classList.remove('hidden');
-                resetBtnContainer.classList.remove('hidden');
+                initialStartContainer.classList.add('hidden');
+                workoutControls.classList.remove('hidden');
             }
-            nextLapBtn.disabled = false;
+            startTimer();
         }
         
         async function finishWorkout() {
             pauseTimer();
+            isOnBreak = false;
+            stopMasterTimer();
+
             if (!isAuthReady) {
                 console.error("Cannot save. Auth not ready.");
                 segmentNameEl.textContent = "Error: Cannot save session.";
@@ -496,14 +561,14 @@
             
             if (currentSegment && segmentTime > 0) {
                 splits.push({ name: currentSegment.name, time: segmentTime });
-                renderSplits();
+            }
+             if (totalBreakTime > 0) {
+                splits.push({ name: 'Total Break Time', time: totalBreakTime });
             }
             
             if (splits.length === 0) {
                 segmentNameEl.textContent = "Workout cancelled. No data saved.";
-                startPauseBtn.disabled = true;
-                nextLapBtn.disabled = true;
-                finishBtn.disabled = true;
+                resetTimer();
                 return false;
             }
 
@@ -517,11 +582,8 @@
                 await addDoc(collectionRef, sessionData);
                 console.log("Session saved successfully!");
                 segmentNameEl.textContent = "Workout Saved!";
-                startPauseBtn.disabled = true;
-                nextLapBtn.disabled = true;
-                finishBtn.disabled = true;
-                resetSegmentBtn.disabled = true;
-                startPauseBtn.className = 'btn bg-slate-700 text-white font-bold py-3 px-4 rounded-lg text-lg';
+                workoutControls.classList.add('hidden');
+                breakControls.classList.add('hidden');
                 return true;
             } catch (error) {
                 console.error("Error saving session: ", error);
@@ -531,19 +593,19 @@
         }
 
         function promptForFinish() {
-            if (splits.length === 0 && segmentTime === 0) {
-                finishWorkout();
-                return;
-            }
             showModal(finishConfirmModal, finishConfirmModal.querySelector('.modal-content'));
         }
         
         async function handleConfirmFinish() {
             hideModal(finishConfirmModal, finishConfirmModal.querySelector('.modal-content'));
+             if(isOnBreak) {
+                totalBreakTime += breakTime;
+                breakTime = 0;
+            }
             const success = await finishWorkout();
             if (success) {
                 congratsTotalTime.innerHTML = formatTime(totalTime, 'medium');
-                congratsSplitsCount.textContent = `${splits.length} segments completed`;
+                congratsSplitsCount.textContent = `${splits.filter(s => s.name !== 'Total Break Time').length} segments completed`;
                 showModal(congratsModal, congratsModal.querySelector('.modal-content'));
                 triggerConfetti();
             }
@@ -551,28 +613,26 @@
         
         function resetTimer() {
             pauseTimer();
-            totalTime = 0; segmentTime = 0;
+            isOnBreak = false;
+            stopMasterTimer();
+
+            totalTime = 0; segmentTime = 0; breakTime = 0; totalBreakTime = 0;
             isRunning = false; workoutStarted = false;
             splits = []; currentSegment = null;
 
             totalTimerEl.innerHTML = formatTime(0, 'medium');
             segmentTimerEl.innerHTML = formatTime(0, 'large');
             segmentNameEl.textContent = 'Ready to start?';
+            segmentLabelEl.textContent = 'Segment Time';
+
             
-            // Set initial state to a single 'Start' button
-            startPauseBtn.textContent = 'Start';
-            startPauseBtn.className = 'btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg text-lg col-span-2';
+            initialStartContainer.classList.remove('hidden');
+            workoutControls.classList.add('hidden');
+            breakControls.classList.add('hidden');
+            breakControls.classList.remove('flex');
+            
             startPauseBtn.disabled = false;
-            
-            nextLapBtn.classList.add('hidden');
-            nextLapBtn.disabled = true;
-
-            finishBtn.classList.add('hidden');
-            resetSegmentBtn.classList.add('hidden');
-            resetSegmentBtn.disabled = false;
-            finishBtn.disabled = false;
-
-            resetBtnContainer.classList.add('hidden');
+            stopBtn.disabled = false;
             
             splitsContainer.innerHTML = '';
             if (splitsPlaceholder) {
@@ -656,10 +716,11 @@
             <h3 class="font-bold mb-2 text-slate-300">Splits</h3>
             <div class="space-y-2">`;
             session.splits.forEach((split, index) => {
+                 const splitColor = split.name === 'Total Break Time' ? 'text-amber-400' : 'text-sky-400';
                 detailsHtml += `
                 <div class="flex justify-between items-center bg-slate-800/80 p-2 rounded-md text-sm">
-                    <span class="font-semibold text-slate-300">${index + 1}. ${split.name}</span>
-                    <span class="font-mono-custom text-sky-400">${formatTime(split.time, 'small')}</span>
+                    <span class="font-semibold text-slate-300">${split.name}</span>
+                    <span class="font-mono-custom ${splitColor}">${formatTime(split.time, 'small')}</span>
                 </div>`;
             });
             detailsHtml += '</div>';
@@ -672,17 +733,13 @@
         }
 
         async function deleteSession() {
-            if (!isAuthReady || !sessionToDelete) {
-                console.error("Auth not ready or no session selected for deletion.");
-                return;
-            }
+            if (!isAuthReady || !sessionToDelete) return;
             try {
                 const docRef = doc(db, 'users', userId, 'sessions', sessionToDelete);
                 await deleteDoc(docRef);
-                console.log("Session deleted successfully:", sessionToDelete);
                 hideModal(deleteConfirmModal, deleteConfirmModal.querySelector('.modal-content'));
-                sessionToDelete = null; // Clear the stored ID
-                await showHistory(); // Refresh the history list
+                sessionToDelete = null; 
+                await showHistory(); 
             } catch (error) {
                 console.error("Error deleting session:", error);
             }
@@ -690,13 +747,17 @@
 
         function promptForReset(type) {
             resetAction = type;
+            let title = "Reset?";
+            let text = "Are you sure?";
             if (type === 'full') {
-                resetConfirmTitle.textContent = "Reset Workout?";
-                resetConfirmText.textContent = "Are you sure? All progress for this session will be lost.";
-            } else {
-                resetConfirmTitle.textContent = "Reset Segment?";
-                resetConfirmText.textContent = "This will restart the timer for the current segment.";
+                 title = "Reset Workout?";
+                 text = "Are you sure? All progress for this session will be lost.";
+            } else if (type === 'segment') {
+                 title = "Reset Segment?";
+                 text = "This will restart the timer for the current segment.";
             }
+            resetConfirmTitle.textContent = title;
+            resetConfirmText.textContent = text;
             showModal(resetConfirmModal, resetConfirmModal.querySelector('.modal-content'));
         }
 
@@ -708,6 +769,20 @@
             }
             hideModal(resetConfirmModal, resetConfirmModal.querySelector('.modal-content'));
             resetAction = null;
+        }
+
+        function toggleResetPopup() {
+            if (resetPopup.classList.contains('hidden')) {
+                resetPopup.classList.remove('hidden');
+                setTimeout(() => {
+                    resetPopup.classList.remove('opacity-0', 'scale-95');
+                }, 10);
+            } else {
+                resetPopup.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    resetPopup.classList.add('hidden');
+                }, 200);
+            }
         }
 
         // --- Confetti Effect ---
@@ -725,10 +800,7 @@
                     y: -10,
                     radius: Math.random() * 3 + 2,
                     color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-                    velocity: {
-                        x: (Math.random() - 0.5) * 10,
-                        y: Math.random() * 5 + 5
-                    },
+                    velocity: { x: (Math.random() - 0.5) * 10, y: Math.random() * 5 + 5 },
                     alpha: 1
                 });
             }
@@ -738,15 +810,11 @@
         function animateConfetti() {
             ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
             confettiParticles.forEach((p, index) => {
-                p.velocity.y += 0.1; // Gravity
+                p.velocity.y += 0.1; 
                 p.x += p.velocity.x;
                 p.y += p.velocity.y;
                 p.alpha -= 0.01;
-
-                if (p.alpha <= 0) {
-                    confettiParticles.splice(index, 1);
-                }
-                
+                if (p.alpha <= 0) confettiParticles.splice(index, 1);
                 ctx.save();
                 ctx.globalAlpha = p.alpha;
                 ctx.beginPath();
@@ -755,28 +823,35 @@
                 ctx.fill();
                 ctx.restore();
             });
-
-            if (confettiParticles.length > 0) {
-                requestAnimationFrame(animateConfetti);
-            }
+            if (confettiParticles.length > 0) requestAnimationFrame(animateConfetti);
         }
 
 
         // --- Event Listeners ---
+        initialStartBtn.addEventListener('click', handleStartPauseClick);
         startPauseBtn.addEventListener('click', handleStartPauseClick);
-        nextLapBtn.addEventListener('click', logSegmentAndPause);
+        stopBtn.addEventListener('click', stopSegmentAndStartBreak);
+        breakStartNewSegmentBtn.addEventListener('click', startNewSegmentFromBreak);
         
-        finishBtn.addEventListener('click', promptForFinish);
+        breakFinishBtn.addEventListener('click', promptForFinish);
         confirmFinishBtn.addEventListener('click', handleConfirmFinish);
         cancelFinishBtn.addEventListener('click', () => hideModal(finishConfirmModal, finishConfirmModal.querySelector('.modal-content')));
         
-        resetBtn.addEventListener('click', () => promptForReset('full'));
-        resetSegmentBtn.addEventListener('click', () => promptForReset('segment'));
-        confirmResetBtn.addEventListener('click', handleConfirmReset);
-        cancelResetBtn.addEventListener('click', () => {
-            hideModal(resetConfirmModal, resetConfirmModal.querySelector('.modal-content'));
-            resetAction = null;
+        resetMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleResetPopup();
         });
+        popupResetSegmentBtn.addEventListener('click', () => {
+            toggleResetPopup();
+            promptForReset('segment');
+        });
+        popupResetFullBtn.addEventListener('click', () => {
+            toggleResetPopup();
+            promptForReset('full');
+        });
+        
+        confirmResetBtn.addEventListener('click', handleConfirmReset);
+        cancelResetBtn.addEventListener('click', () => hideModal(resetConfirmModal, resetConfirmModal.querySelector('.modal-content')));
 
         backBtn.addEventListener('click', () => {
             detailsInputView.classList.add('hidden');
@@ -796,8 +871,16 @@
         });
         closeCongratsBtn.addEventListener('click', () => {
             hideModal(congratsModal, congratsModal.querySelector('.modal-content'));
-            resetTimer(); // Reset the UI to the initial state
+            resetTimer(); 
         });
+
+        // Hide reset popup if clicking outside
+        window.addEventListener('click', (e) => {
+            if (!resetPopup.classList.contains('hidden') && !resetPopup.contains(e.target) && !resetMenuBtn.contains(e.target)) {
+                toggleResetPopup();
+            }
+        });
+
 
         // --- Initial Setup ---
         setupFirebase();
