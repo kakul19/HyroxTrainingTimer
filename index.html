@@ -99,13 +99,13 @@
                 </div>
             </div>
              <!-- Break Time Controls -->
-            <div id="break-controls" class="hidden flex justify-between items-center px-4">
-                <button id="break-start-new-segment-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-24 w-24 rounded-full text-lg">
-                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <button id="break-finish-btn" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold h-24 w-24 rounded-full text-lg">
-                    END
-                </button>
+            <div id="break-controls" class="hidden flex-col items-center gap-4 pt-4">
+                 <div class="flex justify-between items-center px-4 w-full">
+                    <button id="break-start-new-segment-btn" class="btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-24 w-24 rounded-full text-lg">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button id="break-finish-btn" class="btn bg-rose-600 hover:bg-rose-700 text-white font-bold h-24 w-24 rounded-full text-lg">END</button>
+                </div>
             </div>
             <!-- Initial Start Button -->
             <div id="initial-start-container" class="flex justify-center">
@@ -295,6 +295,7 @@
         let isRunning = false, workoutStarted = false, isOnBreak = false;
         let splits = [], currentSegment = null;
         let sessionToDelete = null, resetAction = null;
+        let wakeLock = null;
 
         // --- Firebase State ---
         let db, auth, userId, isAuthReady = false;
@@ -329,6 +330,38 @@
                 historyBtn.textContent = "DB Error";
             }
         }
+        
+       // --- Wake Lock Functions ---
+        const acquireWakeLock = async () => {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Screen Wake Lock is active.');
+                } catch (err) {
+                    console.log('Wake Lock request failed:', err.name, err.message);
+                }
+            }
+        };
+
+        const releaseWakeLock = async () => {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log('Screen Wake Lock released.');
+                } catch(e) {
+                    console.log('Wake Lock release failed:', e.name, e.message);
+                }
+            }
+        };
+
+        const handleVisibilityChange = async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && isRunning) {
+                await acquireWakeLock();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
         // --- Core Functions ---
         const formatTime = (timeInMs, size = 'large') => {
@@ -418,6 +451,7 @@
             if (isRunning) return;
             isRunning = true;
             isOnBreak = false;
+            acquireWakeLock();
             startMasterTimer();
             startPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
             startPauseBtn.classList.replace('bg-emerald-500', 'bg-yellow-500');
@@ -429,6 +463,7 @@
         function pauseTimer() {
             if (isRunning) {
                 isRunning = false;
+                releaseWakeLock();
                 stopMasterTimer();
             }
             startPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
@@ -485,7 +520,7 @@
             if (!workoutStarted || !currentSegment) return;
             totalTime -= segmentTime;
             segmentTime = 0;
-            pauseTimer(); 
+            pauseTimer();
             totalTimerEl.innerHTML = formatTime(totalTime, 'medium');
             segmentTimerEl.innerHTML = formatTime(segmentTime, 'large');
         }
@@ -552,6 +587,7 @@
             pauseTimer();
             isOnBreak = false;
             stopMasterTimer();
+            releaseWakeLock();
 
             if (!isAuthReady) {
                 console.error("Cannot save. Auth not ready.");
@@ -615,6 +651,7 @@
             pauseTimer();
             isOnBreak = false;
             stopMasterTimer();
+            releaseWakeLock();
 
             totalTime = 0; segmentTime = 0; breakTime = 0; totalBreakTime = 0;
             isRunning = false; workoutStarted = false;
